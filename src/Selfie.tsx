@@ -17,6 +17,11 @@ export function Selfie() {
   const [isFaceDetected, setIsFaceDetected] = useState(false);
 
   const capture = React.useCallback(() => {
+    if (imgSrc) {
+      setImgSrc('');
+      return;
+    }
+
     const imageSrc = webcamRef.current?.getScreenshot();
     if (imageSrc) {
       const img = new Image();
@@ -25,6 +30,10 @@ export function Selfie() {
         const ctx = canvas.getContext('2d');
         canvas.width = img.width;
         canvas.height = img.height;
+
+        // Flip the context horizontally
+        ctx?.translate(img.width, 0);
+        ctx?.scale(-1, 1);
 
         // Draw the image onto the canvas
         ctx?.drawImage(img, 0, 0);
@@ -58,7 +67,7 @@ export function Selfie() {
       };
       img.src = imageSrc;
     }
-  }, [webcamRef, setImgSrc]);
+  }, [webcamRef, setImgSrc, imgSrc]);
 
   useEffect(() => {
     // Load face-api.js models
@@ -166,114 +175,133 @@ export function Selfie() {
   };
 
   return (
-    <>
+    <div className='flex flex-col pt-10 justify-center items-center'>
       <div
         style={{
           position: 'relative',
           width: '100%',
           maxWidth: '640px',
-          margin: 'auto',
+          // margin: 'auto',
         }}
       >
-        <Webcam
-          audio={false}
-          ref={webcamRef}
-          screenshotFormat='image/jpeg'
-          style={{ width: '100%', height: 'auto', transform: 'scaleX(-1)' }} // Added transform property here
-        />
+        <div className='overflow-hidden rounded bg-white text-slate-500 shadow-md shadow-slate-200'>
+          <div className='p-6 flex justify-center'>
+            {imgSrc && <img src={imgSrc} alt='Captured' />}
+            {!imgSrc && (
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat='image/jpeg'
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  transform: 'scaleX(-1)',
+                }} // Added transform property here
+              />
+            )}
+          </div>
+        </div>
         <canvas
           ref={canvasRef}
-          style={{ position: 'absolute', top: 0, left: 0 }}
-        />
-        <div
           style={{
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            height: `${FRAME_HEIGHT}px`, // Adjust based on your requirements
-            width: `${FRAME_WIDTH}px`, // Maintain the aspect ratio
-            transform: 'translate(-50%, -50%)',
-            boxSizing: 'border-box',
+            top: 0,
+            left: 0,
+            transform: 'scaleX(-1)',
           }}
-        >
-          {/* Corner divs */}
+        />
+        {!imgSrc && (
           <div
             style={{
               position: 'absolute',
-              top: -10,
-              left: -10,
-              borderLeft: '2px solid red',
-              borderTop: '2px solid red',
-              height: '20px',
-              width: '20px',
-            }}
-          ></div>
-          <div
-            style={{
-              position: 'absolute',
-              top: -10,
-              right: -10,
-              borderRight: '2px solid red',
-              borderTop: '2px solid red',
-              height: '20px',
-              width: '20px',
-            }}
-          ></div>
-          <div
-            style={{
-              position: 'absolute',
-              bottom: -10,
-              left: -10,
-              borderLeft: '2px solid red',
-              borderBottom: '2px solid red',
-              height: '20px',
-              width: '20px',
-            }}
-          ></div>
-          <div
-            style={{
-              position: 'absolute',
-              bottom: -50,
-              left: -10,
-              textAlign: 'left',
-              width: '100%',
+              top: '50%',
+              left: '50%',
+              height: `${FRAME_HEIGHT}px`, // Adjust based on your requirements
+              width: `${FRAME_WIDTH}px`, // Maintain the aspect ratio
+              transform: 'translate(-50%, -50%)',
+              boxSizing: 'border-box',
             }}
           >
-            {isFaceDetected && (
-              <>
-                {isTooClose && <p>You're too close!</p>}
-                {isTooFar && <p>You're too far!</p>}
-                {!isTooClose && !isTooFar && <p>Hold still...</p>}
-              </>
-            )}
-            {!isFaceDetected && <p>Face not detected</p>}
+            {/* Corner divs */}
+            <div
+              style={{
+                position: 'absolute',
+                top: -10,
+                left: -10,
+                borderLeft: '2px solid red',
+                borderTop: '2px solid red',
+                height: '20px',
+                width: '20px',
+              }}
+            ></div>
+            <div
+              style={{
+                position: 'absolute',
+                top: -10,
+                right: -10,
+                borderRight: '2px solid red',
+                borderTop: '2px solid red',
+                height: '20px',
+                width: '20px',
+              }}
+            ></div>
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -10,
+                left: -10,
+                borderLeft: '2px solid red',
+                borderBottom: '2px solid red',
+                height: '20px',
+                width: '20px',
+              }}
+            ></div>
+            <div
+              // style={{
+              //   position: 'absolute',
+              //   bottom: -40,
+              //   left: -10,
+              //   textAlign: 'left',
+              //   width: '100%',
+              // }}
+              className='absolute -bottom-10 -left-3 w-full text-white'
+            >
+              {isFaceDetected && (
+                <>
+                  {isTooClose && <p>You're too close!</p>}
+                  {isTooFar && <p>You're too far!</p>}
+                  {!isTooClose && !isTooFar && <p>Hold still...</p>}
+                </>
+              )}
+              {!isFaceDetected && <p>Face not detected</p>}
+            </div>
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -10,
+                right: -10,
+                borderRight: '2px solid red',
+                borderBottom: '2px solid red',
+                height: '20px',
+                width: '20px',
+              }}
+            ></div>
           </div>
-          <div
-            style={{
-              position: 'absolute',
-              bottom: -10,
-              right: -10,
-              borderRight: '2px solid red',
-              borderBottom: '2px solid red',
-              height: '20px',
-              width: '20px',
-            }}
-          ></div>
+        )}
+      </div>
+      <div>
+        <div className='pt-5 flex justify-center flex-col'>
+          <p className='text-center'>Align your face in the middle</p>
+          <p className='text-center'>Make sure your face is within the frame</p>
+          <button
+            onClick={capture}
+            className='bg-green-300 p-3 rounded-md mt-8 text-black uppercase'
+          >
+            {imgSrc ? 'Recapture' : 'Capture'}
+          </button>
         </div>
       </div>
-
-      <button
-        onClick={capture}
-        style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-        }}
-      >
-        Capture photo
-      </button>
-      {imgSrc && (
+      {/* {imgSrc && (
         <img
           src={imgSrc}
           alt='Captured'
@@ -284,7 +312,7 @@ export function Selfie() {
             height: 'auto',
           }}
         />
-      )}
-    </>
+      )} */}
+    </div>
   );
 }

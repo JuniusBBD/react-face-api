@@ -2,6 +2,11 @@ import { useRef, useEffect, useState } from 'react';
 import Webcam from 'react-webcam';
 import * as faceapi from 'face-api.js';
 
+const FRAME_WIDTH = 320;
+const FRAME_HEIGHT = 400;
+const MIN_FACE_SIZE_RATIO = 0.3;
+const MAX_FACE_SIZE_RATIO = 0.5;
+
 export const SelfieCapture = () => {
   const webcamRef = useRef<Webcam>(null);
   const [borderColor, setBorderColor] = useState('border-red-500');
@@ -22,26 +27,6 @@ export const SelfieCapture = () => {
   }, []);
 
   const detectFace = async () => {
-
-    const detectGlasses = (faceLandmarks: faceapi.FaceLandmarks68) => {
-      const leftEye = faceLandmarks.getLeftEye();
-      const rightEye = faceLandmarks.getRightEye();
-
-      const leftEyeCenter = leftEye[0];
-      const rightEyeCenter = rightEye[3];
-
-      const leftEyeX = leftEyeCenter.x;
-      const rightEyeX = rightEyeCenter.x;
-
-      const eyeDistance = rightEyeX - leftEyeX;
-
-      if (eyeDistance > 0) {
-        return 'No Glasses';
-      } else {
-        return 'Glasses';
-      }
-    };
-
     if (webcamRef.current && webcamRef.current.video?.readyState === 4) {
       const video = webcamRef.current.video;
       const detections = await faceapi
@@ -49,12 +34,11 @@ export const SelfieCapture = () => {
         .withFaceLandmarks();
 
       if (detections.length > 0) {
-        const landmarks = detections[0].landmarks;
+        const face = detections[0];
+        const landmarks = face.landmarks;
         const nose = landmarks.getNose();
         const leftEye = landmarks.getLeftEye();
         const rightEye = landmarks.getRightEye();
-
-        console.log(detectGlasses(landmarks));
 
         const noseCenter = nose[3];
         const leftEyeCenter = leftEye[0];
@@ -64,18 +48,26 @@ export const SelfieCapture = () => {
         const leftEyeX = leftEyeCenter.x;
         const rightEyeX = rightEyeCenter.x;
 
-        // Assuming you have a way to calculate or retrieve the width of the face
         const faceWidth = Math.abs(rightEyeX - leftEyeX);
-
-        // Adjust the threshold based on the width of the face
-        const threshold = faceWidth * 0.9; // Example: 10% of the face width
+        const threshold = faceWidth * 0.9;
 
         const isLookingForward =
           Math.abs(leftEyeX - noseX) < threshold &&
           Math.abs(rightEyeX - noseX) < threshold;
 
-        if (isLookingForward) {
+        // Calculate face size
+        const faceSize = face.detection.box.width * face.detection.box.height;
+        const frameSize = FRAME_WIDTH * FRAME_HEIGHT;
+
+        const faceSizeRatio = faceSize / frameSize;
+        const isTooClose = faceSizeRatio > MAX_FACE_SIZE_RATIO;
+        const isTooFar = faceSizeRatio < MIN_FACE_SIZE_RATIO;
+        const isDistanceCorrect = !isTooClose && !isTooFar;
+
+        if (isLookingForward && isDistanceCorrect) {
           setBorderColor('border-green-500');
+        } else if (isLookingForward && !isDistanceCorrect) {
+          setBorderColor('border-yellow-500'); // Yellow for incorrect distance
         } else {
           setBorderColor('border-red-500');
         }
@@ -88,8 +80,59 @@ export const SelfieCapture = () => {
   const captureScreenshot = () => {
     if (webcamRef.current) {
       const screenshot = webcamRef.current.getScreenshot();
-      setScreenshot(screenshot);
+      if (screenshot) {
+        cropToOval(screenshot);
+      }
     }
+  };
+
+  const cropToOval = (imageSrc: string) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.src = imageSrc;
+
+    img.onload = () => {
+      const ovalWidth = 300;
+      const ovalHeight = 400;
+
+      canvas.width = ovalWidth;
+      canvas.height = ovalHeight;
+
+      if (ctx) {
+        // Draw the image with cover effect
+        const aspectRatio = img.width / img.height;
+        let drawWidth = ovalWidth;
+        let drawHeight = ovalWidth / aspectRatio;
+
+        if (drawHeight < ovalHeight) {
+          drawHeight = ovalHeight;
+          drawWidth = ovalHeight * aspectRatio;
+        }
+
+        const offsetX = (ovalWidth - drawWidth) / 2;
+        const offsetY = (ovalHeight - drawHeight) / 2;
+
+        ctx.clearRect(0, 0, ovalWidth, ovalHeight); // Clear the canvas
+        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.beginPath();
+        ctx.ellipse(
+          ovalWidth / 2,
+          ovalHeight / 2,
+          ovalWidth / 2,
+          ovalHeight / 2,
+          0,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+
+        const croppedImage = canvas.toDataURL('image/png'); // Save as PNG to support transparency
+        setScreenshot(croppedImage);
+      }
+    };
   };
 
   return (
@@ -98,8 +141,10 @@ export const SelfieCapture = () => {
         <Webcam
           audio={false}
           ref={webcamRef}
-          screenshotFormat='image/jpeg'
-          className='w-full h-full object-cover transform scale-x-[-1]'
+          screenshotFormat='image/png'
+          width={300}
+          height={400}
+          className='object-cover w-full h-full transform scale-x-[-1] rounded-full'
         />
         <div
           className={`absolute top-0 left-0 w-full h-full rounded-[50%] border-4 ${borderColor}`}

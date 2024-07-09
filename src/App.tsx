@@ -1,9 +1,9 @@
-import { Selfie } from './Selfie';
+import { SelfieCapture } from './SelfieCapture';
 
 function App() {
   return (
     <>
-      <Selfie />
+      <SelfieCapture />
     </>
   );
 }

@@ -171,7 +171,7 @@ export const SelfieCapture = ({screenshot, setScreenshot,...props}: SelfieCaptur
             ></div>
           </div>
         )}
-        <div className=' w-80 text-center space-y-2'>
+        {(props.isCameraOpen || screenshot) && <div className=' w-80 text-center space-y-2'>
           <p className='text-2xl font-bold'>
             {screenshot ? 'Is it clear enough?' : 'Take a selfie'}
           </p>
@@ -190,7 +190,7 @@ export const SelfieCapture = ({screenshot, setScreenshot,...props}: SelfieCaptur
           >
             <div className='border-2 w-full h-full rounded-full' />
           </button>}
-        </div>
+        </div>}
       </div>
     </div>
   );

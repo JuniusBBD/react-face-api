@@ -9,9 +9,17 @@ function App() {
 
   return (
     <>
+      {!openCamera && !screenshot && (
+        <div className='flex flex-col items-center p-5'>
+          <img className='md:hidden block' src={'/mobile.png'} alt='Mobile' />
+
+          <img className='hidden md:block' src={'/desktop.png'} alt='Desktop' />
+        </div>
+      )}
+
       <SelfieCapture
-      screenshot={screenshot}
-      setScreenshot={setScreenshot}
+        screenshot={screenshot}
+        setScreenshot={setScreenshot}
         onCapture={(image) => {
           setOpenCamera(false);
           setPreviewImage(image);
@@ -28,10 +36,13 @@ function App() {
             }
           }}
           onBack={() => {
+            if (!previewImage) return;
+
             setOpenCamera(true);
             setPreviewImage(null);
             setScreenshot(null);
           }}
+          backLabel={previewImage ? 'Retake' : 'Back'}
           nextLabel={!previewImage ? 'Open Camera' : 'Use this one'}
         />
       )}

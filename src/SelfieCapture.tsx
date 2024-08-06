@@ -7,11 +7,17 @@ const FRAME_HEIGHT = 400;
 const MIN_FACE_SIZE_RATIO = 0.3;
 const MAX_FACE_SIZE_RATIO = 0.5;
 
-export const SelfieCapture = () => {
+type SelfieCaptureProps = {
+  isCameraOpen: boolean;
+  onCapture: (image: string) => void;
+  setScreenshot: (image: string | null) => void;
+  screenshot: string | null;
+};
+
+export const SelfieCapture = ({screenshot, setScreenshot,...props}: SelfieCaptureProps) => {
   const webcamRef = useRef<Webcam>(null);
   const [borderColor, setBorderColor] = useState('border-red-500');
-  const [screenshot, setScreenshot] = useState<string | null>(null);
-
+  const [isFaceWithinFrame, setIsFaceWithinFrame] = useState(false);
   useEffect(() => {
     const loadModels = async () => {
       await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
@@ -66,13 +72,17 @@ export const SelfieCapture = () => {
 
         if (isLookingForward && isDistanceCorrect) {
           setBorderColor('border-green-500');
+          setIsFaceWithinFrame(true);
         } else if (isLookingForward && !isDistanceCorrect) {
           setBorderColor('border-yellow-500'); // Yellow for incorrect distance
+          setIsFaceWithinFrame(false);
         } else {
           setBorderColor('border-red-500');
+          setIsFaceWithinFrame(false);
         }
       } else {
         setBorderColor('border-red-500');
+        setIsFaceWithinFrame(false);
       }
     }
   };
@@ -82,6 +92,7 @@ export const SelfieCapture = () => {
       const screenshot = webcamRef.current.getScreenshot();
       if (screenshot) {
         cropToOval(screenshot);
+        props.onCapture(screenshot);
       }
     }
   };
@@ -137,36 +148,50 @@ export const SelfieCapture = () => {
 
   return (
     <div className='flex flex-col items-center p-5'>
-      <div className='relative w-[300px] h-[400px] rounded-[50%] overflow-hidden mb-5'>
-        <Webcam
-          audio={false}
-          ref={webcamRef}
-          screenshotFormat='image/png'
-          width={300}
-          height={400}
-          className='object-cover w-full h-full transform scale-x-[-1] rounded-full'
-        />
-        <div
-          className={`absolute top-0 left-0 w-full h-full rounded-[50%] border-4 ${borderColor}`}
-        ></div>
-      </div>
-      <p className='text-base font-bold'>
-        Please move your face inside the oval
-      </p>
-      <p className='text-sm text-gray-500'>
-        Tips: Put your face inside the oval frame and wait until it turns green
-      </p>
-      <button
-        onClick={captureScreenshot}
-        className='mt-5 px-4 py-2 bg-blue-500 text-white rounded'
-      >
-        Capture Screenshot
-      </button>
-      {screenshot && (
-        <div className='mt-5'>
-          <img src={screenshot} alt='Screenshot' />
+      <div className='w-80'>
+        {screenshot && (
+          <div className='relative w-[300px] h-[400px] rounded-[50%] overflow-hidden mb-5'>
+            <div className='mt-5'>
+              <img src={screenshot} alt='Screenshot' />
+            </div>
+          </div>
+        )}
+        {props.isCameraOpen && !screenshot && (
+          <div className='relative w-[300px] h-[400px] rounded-[50%] overflow-hidden mb-5'>
+            <Webcam
+              audio={false}
+              ref={webcamRef}
+              screenshotFormat='image/png'
+              width={300}
+              height={400}
+              className='object-cover w-full h-full transform scale-x-[-1] rounded-full'
+            />
+            <div
+              className={`absolute top-0 left-0 w-full h-full rounded-[50%] border-8 ${borderColor}`}
+            ></div>
+          </div>
+        )}
+        <div className=' w-80 text-center space-y-2'>
+          <p className='text-2xl font-bold'>
+            {screenshot ? 'Is it clear enough?' : 'Take a selfie'}
+          </p>
+          <p className='text-sm text-gray-500'>
+            {screenshot
+              ? 'Make sure your face is clear, well lit and that you have removed your glasses'
+              : 'Remove hats and glasses. Place your face in the oval. Take picture when the frame turns green.'}
+          </p>
+          {!screenshot && <button
+            onClick={() => isFaceWithinFrame && captureScreenshot()}
+            className={`border-[1px]  ${
+              isFaceWithinFrame
+                ? 'bg-green-500 border-green-500'
+                : 'bg-black border-black'
+            } w-[90px] h-[90px] rounded-full`}
+          >
+            <div className='border-2 w-full h-full rounded-full' />
+          </button>}
         </div>
-      )}
+      </div>
     </div>
   );
 };

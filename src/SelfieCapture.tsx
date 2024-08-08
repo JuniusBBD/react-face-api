@@ -14,9 +14,14 @@ type SelfieCaptureProps = {
   screenshot: string | null;
 };
 
-export const SelfieCapture = ({screenshot, setScreenshot,...props}: SelfieCaptureProps) => {
+export const SelfieCapture = ({
+  screenshot,
+  setScreenshot,
+  ...props
+}: SelfieCaptureProps) => {
   const webcamRef = useRef<Webcam>(null);
   const [borderColor, setBorderColor] = useState('border-red-500');
+  const [message, setMessage] = useState('');
   const [isFaceWithinFrame, setIsFaceWithinFrame] = useState(false);
   useEffect(() => {
     const loadModels = async () => {
@@ -70,8 +75,13 @@ export const SelfieCapture = ({screenshot, setScreenshot,...props}: SelfieCaptur
         const isTooFar = faceSizeRatio < MIN_FACE_SIZE_RATIO;
         const isDistanceCorrect = !isTooClose && !isTooFar;
 
+        if (isTooClose || isTooFar) {
+          setMessage(isTooClose ? 'Too close' : 'Too far');
+        }
+
         if (isLookingForward && isDistanceCorrect) {
           setBorderColor('border-green-500');
+          setMessage('Perfect!');
           setIsFaceWithinFrame(true);
         } else if (isLookingForward && !isDistanceCorrect) {
           setBorderColor('border-yellow-500'); // Yellow for incorrect distance
@@ -169,28 +179,37 @@ export const SelfieCapture = ({screenshot, setScreenshot,...props}: SelfieCaptur
             <div
               className={`absolute top-0 left-0 w-full h-full rounded-[50%] border-8 ${borderColor}`}
             ></div>
+            {message && (
+              <div className='text-black absolute bottom-[40px] p-2 rounded-md bg-opacity-40 bg-white right-[120px]'>
+                <p>{message}</p>
+              </div>
+            )}
           </div>
         )}
-        {(props.isCameraOpen || screenshot) && <div className=' w-80 text-center space-y-2'>
-          <p className='text-2xl font-bold'>
-            {screenshot ? 'Is it clear enough?' : 'Take a selfie'}
-          </p>
-          <p className='text-sm text-gray-500'>
-            {screenshot
-              ? 'Make sure your face is clear, well lit and that you have removed your glasses'
-              : 'Remove hats and glasses. Place your face in the oval. Take picture when the frame turns green.'}
-          </p>
-          {!screenshot && <button
-            onClick={() => isFaceWithinFrame && captureScreenshot()}
-            className={`border-[1px]  ${
-              isFaceWithinFrame
-                ? 'bg-green-500 border-green-500'
-                : 'bg-black border-black'
-            } w-[90px] h-[90px] rounded-full`}
-          >
-            <div className='border-2 w-full h-full rounded-full' />
-          </button>}
-        </div>}
+        {(props.isCameraOpen || screenshot) && (
+          <div className=' w-80 text-center space-y-2'>
+            <p className='text-2xl font-bold'>
+              {screenshot ? 'Is it clear enough?' : 'Take a selfie'}
+            </p>
+            <p className='text-sm text-gray-500'>
+              {screenshot
+                ? 'Make sure your face is clear, well lit and that you have removed your glasses'
+                : 'Remove hats and glasses. Place your face in the oval. Take picture when the frame turns green.'}
+            </p>
+            {!screenshot && (
+              <button
+                onClick={() => isFaceWithinFrame && captureScreenshot()}
+                className={`border-[1px]  ${
+                  isFaceWithinFrame
+                    ? 'bg-green-500 border-green-500'
+                    : 'bg-black border-black'
+                } w-[90px] h-[90px] rounded-full`}
+              >
+                <div className='border-2 w-full h-full rounded-full' />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
